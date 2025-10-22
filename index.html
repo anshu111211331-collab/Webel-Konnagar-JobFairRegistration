@@ -1,0 +1,98 @@
+<!-- Save as index.html and open over HTTPS or serve locally via a simple server -->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Job Fair Registration</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+  <div class="bg-white p-6 rounded shadow max-w-xl w-full">
+    <h1 class="text-xl font-bold mb-4">Job Fair Registration</h1>
+    <form id="jobFairForm" class="space-y-3">
+      <input name="name" placeholder="Full name" required class="w-full p-2 border rounded"/>
+      <input name="contact" placeholder="Contact number" required class="w-full p-2 border rounded"/>
+      <input name="whatsapp" placeholder="WhatsApp number" required class="w-full p-2 border rounded"/>
+      <input type="email" name="email" placeholder="Email" required class="w-full p-2 border rounded"/>
+      <textarea name="address" placeholder="Address" required class="w-full p-2 border rounded"></textarea>
+      <input name="qualification" placeholder="Last qualification" required class="w-full p-2 border rounded"/>
+      <input name="skills" placeholder="Skills" required class="w-full p-2 border rounded"/>
+      <input name="jobrole" placeholder="Job role looking for" required class="w-full p-2 border rounded"/>
+      <label class="block">Resume (PDF)</label>
+      <input name="resume" type="file" accept="application/pdf" required class="w-full"/>
+      <button type="submit" class="w-full py-2 bg-blue-600 text-white rounded">Submit</button>
+    </form>
+
+    <p id="responseMsg" class="mt-4 text-center"></p>
+  </div>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbwl2CMbUp4cKYSlN1p6PnY-a9q1uSzX3hEI75PjaV8zdzhHllvMC45O7b8aIl_BWb67Dg/exec"; // <-- set this
+
+    document.getElementById('jobFairForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const file = form.resume.files[0];
+      const msg = document.getElementById('responseMsg');
+      msg.textContent = 'Uploading...';
+      try {
+        if (!file) throw new Error('Please attach a resume (PDF).');
+
+        // Read file as base64
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const payload = {
+            name: form.name.value.trim(),
+            contact: form.contact.value.trim(),
+            whatsapp: form.whatsapp.value.trim(),
+            email: form.email.value.trim(),
+            address: form.address.value.trim(),
+            qualification: form.qualification.value.trim(),
+            skills: form.skills.value.trim(),
+            jobrole: form.jobrole.value.trim(),
+            resume: reader.result,
+            fileName: file.name,
+            fileType: file.type || 'application/pdf'
+          };
+
+          console.log('Sending payload to server...', payload);
+
+          const res = await fetch(scriptURL, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          console.log('Fetch returned, status:', res.status, res.statusText);
+
+          // If server returned non-JSON (error page), show text
+          const text = await res.text();
+          try {
+            const json = JSON.parse(text);
+            if (json.result === 'success') {
+              msg.textContent = '✅ Registration submitted successfully!';
+              form.reset();
+            } else {
+              console.error('Server response:', json);
+              msg.textContent = '❌ Server rejected the submission. Check console.';
+            }
+          } catch (err) {
+            // Not JSON — show raw response for debugging
+            console.error('Non-JSON response from server:', text);
+            msg.textContent = '❌ Unexpected server response. See console for details.';
+          }
+        };
+        reader.onerror = (err) => {
+          throw err;
+        };
+        reader.readAsDataURL(file);
+      } catch (err) {
+        console.error(err);
+        msg.textContent = '❌ Error: ' + (err.message || err);
+      }
+    });
+  </script>
+</body>
+</html>
